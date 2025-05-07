@@ -29,4 +29,5 @@ def chat_with_user(user_message):
         )
         return response.choices[0].message.content.strip()
     except Exception as e:
+        print(f"[OpenAI API Error] {str(e)}")
         return random.choice(CHAT_RESPONSES) 
