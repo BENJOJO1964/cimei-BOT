@@ -66,8 +66,8 @@ def create_flavor_selection():
                         "style": "primary",
                         "action": {
                             "type": "message",
-                            "label": "紅豆",
-                            "text": "Red Bean"
+                            "label": "花生",
+                            "text": "花生"
                         }
                     },
                     {
@@ -75,8 +75,26 @@ def create_flavor_selection():
                         "style": "primary",
                         "action": {
                             "type": "message",
-                            "label": "花生",
-                            "text": "Peanut"
+                            "label": "紅豆",
+                            "text": "紅豆"
+                        }
+                    },
+                    {
+                        "type": "button",
+                        "style": "primary",
+                        "action": {
+                            "type": "message",
+                            "label": "棗泥",
+                            "text": "棗泥"
+                        }
+                    },
+                    {
+                        "type": "button",
+                        "style": "primary",
+                        "action": {
+                            "type": "message",
+                            "label": "芋泥",
+                            "text": "芋泥"
                         }
                     },
                     {
@@ -85,7 +103,7 @@ def create_flavor_selection():
                         "action": {
                             "type": "message",
                             "label": "芝麻",
-                            "text": "Sesame"
+                            "text": "芝麻"
                         }
                     },
                     {
@@ -93,17 +111,8 @@ def create_flavor_selection():
                         "style": "primary",
                         "action": {
                             "type": "message",
-                            "label": "芋頭",
-                            "text": "Taro"
-                        }
-                    },
-                    {
-                        "type": "button",
-                        "style": "primary",
-                        "action": {
-                            "type": "message",
-                            "label": "紫米",
-                            "text": "Purple Rice"
+                            "label": "咖哩",
+                            "text": "咖哩"
                         }
                     }
                 ]

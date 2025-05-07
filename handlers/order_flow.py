@@ -13,7 +13,7 @@ handler = WebhookHandler(LINE_CHANNEL_SECRET)
 # Store user order state
 user_orders = {}
 
-FLAVORS = ["Red Bean", "Peanut", "Sesame", "Taro", "Purple Rice"]
+FLAVORS = ["花生", "紅豆", "棗泥", "芋泥", "芝麻", "咖哩"]
 QUANTITIES = ["6", "12", "20"]
 
 def handle_order_flow(event):
@@ -89,7 +89,7 @@ def send_flavor_selection(reply_token):
     ]
     
     message = TextSendMessage(
-        text="請選擇您想要的麻糬口味：",
+        text="請問想品嚐哪一款麻糬呢？每一種都是次妹用心手作，歡迎選擇：",
         quick_reply=QuickReply(items=quick_reply_items)
     )
     
