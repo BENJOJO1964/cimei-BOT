@@ -5,4 +5,5 @@ python-dotenv
 schedule
 lunarcalendar
 gspread
-oauth2client 
+oauth2client
+openai 

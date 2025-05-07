@@ -1,4 +1,7 @@
+import os
 import random
+import openai
+from config.env import OPENAI_API_KEY
 
 # 多樣化知性溫柔回應
 CHAT_RESPONSES = [
@@ -10,5 +13,20 @@ CHAT_RESPONSES = [
 ]
 
 def chat_with_user(user_message):
-    # 未來可串 GPT，這裡先用隨機回應
-    return random.choice(CHAT_RESPONSES) 
+    if not OPENAI_API_KEY:
+        return random.choice(CHAT_RESPONSES)
+    openai.api_key = OPENAI_API_KEY
+    try:
+        system_prompt = "你是次妹手工麻糬BOT，品牌形象知性溫柔，善於用溫暖、療癒、生活化的語氣陪伴用戶聊天，並適時分享麻糬、天氣、生活小知識。請用繁體中文回答。"
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_message}
+            ],
+            max_tokens=120,
+            temperature=0.8
+        )
+        return response.choices[0].message.content.strip()
+    except Exception as e:
+        return random.choice(CHAT_RESPONSES) 
