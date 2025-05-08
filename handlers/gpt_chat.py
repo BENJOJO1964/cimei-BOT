@@ -3,6 +3,8 @@ import random
 import openai
 from config.env import OPENAI_API_KEY
 
+print("[DEBUG] Render 啟動時讀到的 OPENAI_API_KEY =", repr(OPENAI_API_KEY))
+
 # 多樣化知性溫柔回應
 CHAT_RESPONSES = [
     "嗨，我是次妹～有什麼想聊的嗎？不管是麻糬還是生活都可以問我喔！",
