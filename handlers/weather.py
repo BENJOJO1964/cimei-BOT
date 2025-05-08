@@ -2,6 +2,27 @@ import requests
 import os
 from config.env import WEATHER_API_KEY
 
+# 台灣主要城市中英文對應
+CITY_MAP = {
+    '台北': 'Taipei', '臺北': 'Taipei',
+    '新北': 'New Taipei',
+    '桃園': 'Taoyuan',
+    '台中': 'Taichung', '臺中': 'Taichung',
+    '台南': 'Tainan', '臺南': 'Tainan',
+    '高雄': 'Kaohsiung',
+    '基隆': 'Keelung',
+    '新竹': 'Hsinchu',
+    '嘉義': 'Chiayi',
+    '苗栗': 'Miaoli',
+    '彰化': 'Changhua',
+    '南投': 'Nantou',
+    '雲林': 'Yunlin',
+    '屏東': 'Pingtung',
+    '宜蘭': 'Yilan',
+    '花蓮': 'Hualien',
+    '台東': 'Taitung', '臺東': 'Taitung'
+}
+
 # 可根據天氣狀況推薦不同口味
 WEATHER_TO_FLAVOR = {
     'sunny': ['紅豆', '花生'],
@@ -13,14 +34,17 @@ WEATHER_TO_FLAVOR = {
     'other': ['任選都適合']
 }
 
-# 多樣化推薦語
+# 更多品牌感推薦語
 RECOMMEND_TEMPLATES = [
     "{city}今天天氣{weather}，很適合來份{flavor}麻糬，讓心情更美好！",
     "{city}現在是{weather}，推薦你試試{flavor}口味的麻糬，Q彈又療癒～",
-    "天氣{weather}，{city}的你不妨來點{flavor}麻糬，幸福感up！"
+    "天氣{weather}，{city}的你不妨來點{flavor}麻糬，幸福感up！",
+    "{city}的天空{weather}，次妹陪你一起享受一顆療癒的{flavor}麻糬。",
+    "{city}天氣{weather}，來份{flavor}麻糬，讓生活多一點甜！",
+    "{city}今天天氣{weather}，麻糬的溫柔陪伴，讓你每一天都更美好。",
+    "{city}的{weather}天，最適合和家人朋友分享{flavor}麻糬的幸福滋味。"
 ]
 
-# 取得天氣資料（簡化版，僅示範台北市）
 def get_weather(city="Taipei"):
     url = f"http://api.weatherapi.com/v1/current.json?key={WEATHER_API_KEY}&q={city}&lang=zh_tw"
     try:
@@ -51,10 +75,16 @@ def recommend_flavor_by_weather(weather_key):
     return WEATHER_TO_FLAVOR.get(weather_key, WEATHER_TO_FLAVOR['other'])[0]
 
 import random
-def get_weather_and_recommend(city="Taipei"):
+def get_weather_and_recommend(user_city="Taipei"):
+    # 自動判斷中文城市
+    city = user_city
+    for zh, en in CITY_MAP.items():
+        if zh in user_city:
+            city = en
+            break
     weather, key = get_weather(city)
     if not weather:
-        return f"抱歉，次妹暫時查不到{city}的天氣資訊喔！"
+        return f"抱歉，次妹暫時查不到{user_city}的天氣資訊喔！"
     flavor = recommend_flavor_by_weather(key)
     template = random.choice(RECOMMEND_TEMPLATES)
-    return template.format(city=city, weather=weather, flavor=flavor) 
+    return template.format(city=user_city, weather=weather, flavor=flavor) 
