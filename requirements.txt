@@ -6,4 +6,4 @@ schedule
 lunarcalendar
 gspread
 oauth2client
-openai 
+openai>=1.2.0 
