@@ -15,6 +15,8 @@ user_orders = {}
 
 FLAVORS = ["花生", "紅豆", "棗泥", "芋泥", "芝麻", "咖哩"]
 QUANTITIES = ["6", "12", "20"]
+PICKUP_OPTIONS = ["自取", "外送"]
+DELIVERY_FEE = 30
 
 def handle_order_flow(event):
     user_id = event.source.user_id
@@ -25,6 +27,8 @@ def handle_order_flow(event):
             "step": 1,
             "flavor": None,
             "quantity": None,
+            "pickup": None,
+            "remark": "",
             "customer_info": {}
         }
     
@@ -44,35 +48,44 @@ def handle_order_flow(event):
         if event.message.text in QUANTITIES:
             current_state["quantity"] = event.message.text
             current_state["step"] = 3
-            return send_customer_info_request(event.reply_token)
+            return send_pickup_option(event.reply_token)
         else:
             return send_quantity_selection(event.reply_token)
     
-    # Step 3: Collect customer info
+    # Step 3: Select pickup option
     elif current_state["step"] == 3:
-        # Parse customer info (assuming format: "Name|Address|Phone")
+        current_state["pickup"] = event.message.text.strip()
+        current_state["step"] = 4
+        return send_customer_info_request(event.reply_token)
+    
+    # Step 4: Collect customer info
+    elif current_state["step"] == 4:
+        # Parse customer info (assuming format: "Name|Address|Phone|Remark")
         try:
-            name, address, phone = event.message.text.split("|")
+            info = event.message.text.strip().split("|")
             current_state["customer_info"] = {
-                "name": name.strip(),
-                "address": address.strip(),
-                "phone": phone.strip()
+                "name": info[0],
+                "address": info[1],
+                "phone": info[2]
             }
+            if len(info) > 3:
+                current_state["remark"] = info[3]
+            
+            # Calculate price
+            qty = int(current_state["quantity"])
+            price = qty * 10
+            if current_state["pickup"] == "外送":
+                price += DELIVERY_FEE
+                current_state["remark"] += f"（外送加收{DELIVERY_FEE}元）"
             
             # Create order summary
-            summary = build_order_summary_flex({
-                "flavor": current_state["flavor"],
-                "quantity": current_state["quantity"],
-                "name": current_state["customer_info"].get("name", ""),
-                "phone": current_state["customer_info"].get("phone", ""),
-                "address": current_state["customer_info"].get("address", "")
-            })
+            summary = f"口味：{current_state['flavor']}\n數量：{qty} 顆\n取貨方式：{current_state['pickup']}\n姓名：{current_state['customer_info']['name']}\n電話：{current_state['customer_info']['phone']}\n地址：{current_state['customer_info']['address']}\n備註：{current_state['remark']}\n總金額：{price}元"
             
             # Send order summary
-            line_bot_api.reply_message(
-                event.reply_token,
-                FlexSendMessage(alt_text="Order Summary", contents=summary["contents"])
-            )
+            line_bot_api.reply_message(event.reply_token, TextSendMessage(text=summary))
+            
+            # Save order to Google Sheet
+            save_order_to_sheet(user_id, current_state)
             
             # Clear user state
             del user_orders[user_id]
@@ -107,6 +120,18 @@ def send_quantity_selection(reply_token):
         quick_reply=QuickReply(items=quick_reply_items)
     )
     
+    line_bot_api.reply_message(reply_token, message)
+    return jsonify({"status": "success"})
+
+def send_pickup_option(reply_token):
+    quick_reply_items = [
+        QuickReplyButton(action=MessageAction(label=opt, text=opt))
+        for opt in PICKUP_OPTIONS
+    ]
+    message = TextSendMessage(
+        text="請選擇取貨方式：",
+        quick_reply=QuickReply(items=quick_reply_items)
+    )
     line_bot_api.reply_message(reply_token, message)
     return jsonify({"status": "success"})
 
