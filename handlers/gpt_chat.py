@@ -14,6 +14,13 @@ CHAT_RESPONSES = [
     "如果你想知道麻糬的故事、吃法或保存方法，都可以問我唷！"
 ]
 
+def optimize_prompt(user_message):
+    # 根據常見需求自動優化 prompt
+    prompt = user_message
+    if any(kw in user_message for kw in ["三句話", "三句內", "三句以內", "三句話介紹", "簡短", "精簡", "一句話"]):
+        prompt = f"請用簡短、重點式的方式回答：{user_message}"
+    return prompt
+
 def chat_with_user(user_message):
     if not OPENAI_API_KEY:
         return random.choice(CHAT_RESPONSES)
@@ -24,11 +31,13 @@ def chat_with_user(user_message):
         system_prompt = "你是次妹手工麻糬BOT，品牌形象知性溫柔，善於用溫暖、療癒、生活化的語氣陪伴用戶聊天，並適時分享麻糬、天氣、生活小知識。請用繁體中文回答。"
         model_name = "gpt-3.5-turbo"
         print(f"[DEBUG] 使用的模型：{model_name}")
+        # 自動優化 prompt
+        optimized_user_message = optimize_prompt(user_message)
         response = client.chat.completions.create(
             model=model_name,
             messages=[
                 {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_message}
+                {"role": "user", "content": optimized_user_message}
             ],
             max_tokens=120,
             temperature=0.8
