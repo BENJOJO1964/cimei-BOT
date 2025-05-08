@@ -19,8 +19,10 @@ def chat_with_user(user_message):
     print(f"[DEBUG] OPENAI_API_KEY={repr(OPENAI_API_KEY)}")
     try:
         system_prompt = "你是次妹手工麻糬BOT，品牌形象知性溫柔，善於用溫暖、療癒、生活化的語氣陪伴用戶聊天，並適時分享麻糬、天氣、生活小知識。請用繁體中文回答。"
+        model_name = "gpt-3.5-turbo"
+        print(f"[DEBUG] 使用的模型：{model_name}")
         response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
+            model=model_name,
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_message}
