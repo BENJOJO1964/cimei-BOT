@@ -24,6 +24,7 @@ def home():
 def webhook():
     signature = request.headers['X-Line-Signature']
     body = request.get_data(as_text=True)
+    print("[DEBUG] webhook body:", body)  # 印出原始 JSON
     app.logger.info("Request body: " + body)
     try:
         handler.handle(body, signature)
@@ -118,6 +119,10 @@ def handle_message(event):
             TextSendMessage(text="您好！我是次妹，想買麻糬嗎？輸入『買麻糬』開始訂購流程，或輸入『天氣』『陪我聊聊』體驗更多功能！")
         )
         return
+
+@handler.default()
+def default(event):
+    print(f"[DEBUG] Unhandled event type: {type(event)} — raw: {event}")
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=5001) 
