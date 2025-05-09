@@ -50,6 +50,7 @@ def webhook():
 
 @handler.add(FollowEvent)
 def handle_follow(event):
+    print('[DEBUG] FollowEvent 觸發，發送歡迎詞')
     welcome_text = (
         "🎉 歡迎加入次妹手工麻糬BOT！\n"
         "我是次妹，Q彈的麻糬就像生活裡的小確幸～\n"
