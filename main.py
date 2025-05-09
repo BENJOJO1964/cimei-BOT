@@ -20,22 +20,6 @@ print("[DEBUG] Render 啟動時讀到的 OPENAI_API_KEY (main.py) =", repr(os.ge
 def home():
     return "Line Bot Server is running!"
 
-@app.route("/callback", methods=['POST'])
-def callback():
-    # Get X-Line-Signature header value
-    signature = request.headers['X-Line-Signature']
-
-    # Get request body as text
-    body = request.get_data(as_text=True)
-    app.logger.info("Request body: " + body)
-
-    try:
-        handler.handle(body, signature)
-    except InvalidSignatureError:
-        abort(400)
-
-    return 'OK'
-
 @app.route("/webhook", methods=['POST'])
 def webhook():
     signature = request.headers['X-Line-Signature']

@@ -39,16 +39,21 @@ def handle_order_flow(event):
 
 def send_order_form(reply_token):
     form_text = (
-        "請填選下列訊息後按(確定)：\n"
+        "請複製下方範例，修改成您的訂單內容後直接送出：\n"
         "格式：口味|數量|自取/派送|地址（自取可省略地址）\n"
         "範例：花生|12|自取\n"
         "或：芝麻|6|派送|台北市信義區信義路五段7號\n"
         "可選口味：花生、紅豆、棗泥、芋泥、芝麻、咖哩"
     )
+    example_text = "花生|12|自取"
     from linebot import LineBotApi
     from config.env import LINE_CHANNEL_ACCESS_TOKEN
     line_bot_api = LineBotApi(LINE_CHANNEL_ACCESS_TOKEN)
-    line_bot_api.reply_message(reply_token, TextSendMessage(text=form_text))
+    # 先發說明，再發可複製範例
+    line_bot_api.reply_message(reply_token, [
+        TextSendMessage(text=form_text),
+        TextSendMessage(text=f"可複製範例：{example_text}")
+    ])
     return jsonify({"status": "success"})
 
 def send_telegram_order_notification(message):
