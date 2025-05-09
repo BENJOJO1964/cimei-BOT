@@ -79,7 +79,7 @@ def handle_message(event):
                 "layout": "vertical",
                 "contents": [
                     {"type": "text", "text": "Please reply using this format:", "weight": "bold", "size": "md"},
-                    {"type": "text", "text": "- 口味：花生 / 芝麻 / 綠豆"},
+                    {"type": "text", "text": "- 口味：花生 / 芝麻 / 紅豆 / 棗泥 / 芋泥 / 咖哩"},
                     {"type": "text", "text": "- 數量：2盒"},
                     {"type": "text", "text": "- 取貨方式：自取 / 派送（加收50元）"},
                     {"type": "text", "text": "- 地址：若選派送，請填寫完整地址"}
