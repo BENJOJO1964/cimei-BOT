@@ -52,6 +52,7 @@ def get_weather(city="Taipei"):
         data = res.json()
         weather = data['current']['condition']['text']
         code = data['current']['condition']['code']
+        temp = data['current']['temp_c']
         # 英文關鍵字分類
         lower_text = data['current']['condition']['text'].lower()
         if '晴' in weather or 'sunny' in lower_text or 'clear' in lower_text:
@@ -66,10 +67,10 @@ def get_weather(city="Taipei"):
             key = 'snow'
         else:
             key = 'other'
-        return weather, key
+        return weather, key, temp
     except Exception as e:
         print(f"[WeatherAPI Error] {str(e)}")
-        return None, None
+        return None, None, None
 
 def recommend_flavor_by_weather(weather_key):
     return WEATHER_TO_FLAVOR.get(weather_key, WEATHER_TO_FLAVOR['other'])[0]
@@ -82,9 +83,9 @@ def get_weather_and_recommend(user_city="Taipei"):
         if zh in user_city:
             city = en
             break
-    weather, key = get_weather(city)
+    weather, key, temp = get_weather(city)
     if not weather:
         return f"抱歉，次妹暫時查不到{user_city}的天氣資訊喔！"
     flavor = recommend_flavor_by_weather(key)
     template = random.choice(RECOMMEND_TEMPLATES)
-    return template.format(city=user_city, weather=weather, flavor=flavor) 
+    return template.format(city=user_city, weather=weather, flavor=flavor) + f"\n目前溫度：{temp}°C" 

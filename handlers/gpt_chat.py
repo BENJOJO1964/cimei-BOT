@@ -39,7 +39,7 @@ def chat_with_user(user_message):
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": optimized_user_message}
             ],
-            max_tokens=120,
+            max_tokens=60,
             temperature=0.8
         )
         return response.choices[0].message.content.strip()
