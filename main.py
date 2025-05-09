@@ -1,7 +1,7 @@
 from flask import Flask, request, abort
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
-from linebot.models import TextSendMessage, MessageEvent, TextMessage
+from linebot.models import TextSendMessage, MessageEvent, TextMessage, FollowEvent
 import os
 
 from config.env import LINE_CHANNEL_ACCESS_TOKEN, LINE_CHANNEL_SECRET
@@ -99,6 +99,16 @@ def handle_message(event):
             event.reply_token,
             TextSendMessage(text="您好！我是次妹，想買麻糬嗎？輸入『我要買麻糬』開始訂購流程，或輸入『天氣』『玩遊戲』『陪我聊聊』體驗更多功能！")
         )
+
+@handler.add(FollowEvent)
+def handle_follow(event):
+    welcome_text = (
+        "🎉 歡迎加入次妹手工麻糬BOT！\n"
+        "我是次妹，Q彈的麻糬就像生活裡的小確幸～\n"
+        "輸入『我要買麻糬』開始訂購，或輸入『天氣』『玩遊戲』體驗更多有趣功能！\n"
+        "品牌故事、保存方式、營業時間都可以問我唷！"
+    )
+    line_bot_api.reply_message(event.reply_token, TextSendMessage(text=welcome_text))
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=5001) 

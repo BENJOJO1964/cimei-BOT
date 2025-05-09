@@ -4,8 +4,9 @@ from linebot.models import (
     TextSendMessage, FlexSendMessage, QuickReply,
     QuickReplyButton, MessageAction
 )
-from config.env import LINE_CHANNEL_ACCESS_TOKEN, LINE_CHANNEL_SECRET
+from config.env import LINE_CHANNEL_ACCESS_TOKEN, LINE_CHANNEL_SECRET, TELEGRAM_BOT_TOKEN, TELEGRAM_GROUP_ID
 from services.flex_builder import create_flavor_selection, create_quantity_selection, build_order_summary_flex
+import requests
 
 line_bot_api = LineBotApi(LINE_CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(LINE_CHANNEL_SECRET)
@@ -81,8 +82,11 @@ def handle_order_flow(event):
             # Create order summary
             summary = f"口味：{current_state['flavor']}\n數量：{qty} 顆\n取貨方式：{current_state['pickup']}\n姓名：{current_state['customer_info']['name']}\n電話：{current_state['customer_info']['phone']}\n地址：{current_state['customer_info']['address']}\n備註：{current_state['remark']}\n總金額：{price}元"
             
-            # Send order summary
+            # LINE 回覆
             line_bot_api.reply_message(event.reply_token, TextSendMessage(text=summary))
+            
+            # Telegram 推播
+            send_telegram_order_notification(summary)
             
             # Save order to Google Sheet
             save_order_to_sheet(user_id, current_state)
@@ -141,4 +145,15 @@ def send_customer_info_request(reply_token):
     )
     
     line_bot_api.reply_message(reply_token, message)
-    return jsonify({"status": "success"}) 
+    return jsonify({"status": "success"})
+
+def send_telegram_order_notification(message):
+    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+    payload = {
+        "chat_id": TELEGRAM_GROUP_ID,
+        "text": f"【新訂單通知】\n{message}"
+    }
+    try:
+        requests.post(url, data=payload, timeout=5)
+    except Exception as e:
+        print(f"[Telegram Error] {e}") 
