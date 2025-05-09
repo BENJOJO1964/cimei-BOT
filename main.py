@@ -7,7 +7,6 @@ import os
 from config.env import LINE_CHANNEL_ACCESS_TOKEN, LINE_CHANNEL_SECRET
 from handlers.order_flow import handle_order_flow
 from handlers.weather import get_weather_and_recommend
-from handlers.game import start_game, handle_game_answer
 from handlers.gpt_chat import chat_with_user
 
 app = Flask(__name__)
@@ -54,7 +53,7 @@ def handle_follow(event):
     welcome_text = (
         "🎉 歡迎加入次妹手工麻糬BOT！\n"
         "我是次妹，Q彈的麻糬就像生活裡的小確幸～\n"
-        "輸入『我要買麻糬』開始訂購，或輸入『天氣』『玩遊戲』體驗更多有趣功能！\n"
+        "輸入『買麻糬』開始訂購，或輸入『天氣』『陪我聊聊』體驗更多有趣功能！\n"
         "品牌故事、保存方式、營業時間都可以問我唷！"
     )
     line_bot_api.reply_message(event.reply_token, TextSendMessage(text=welcome_text))
@@ -80,7 +79,7 @@ def handle_message(event):
     ]
     # 訂購流程（只在明確訂單關鍵字時觸發）
     if user_message in ["我要買麻糬", "買麻糬", "訂購麻糬"]:
-        print("[DEBUG] 進入訂單流程")
+        print("[DEBUG] 進入訂單流程（表格填寫）")
         handle_order_flow(event)
         return
     # 天氣查詢
@@ -91,13 +90,6 @@ def handle_message(event):
                 city = c.replace("台", "臺") + "市"
         reply = get_weather_and_recommend(city)
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply))
-        return
-    # 小遊戲
-    elif user_message in ["玩遊戲", "麻糬遊戲", "猜口味"]:
-        start_game(event, line_bot_api)
-        return
-    elif user_message in ["紅豆", "花生", "芝麻", "芋頭", "紫米"]:
-        handle_game_answer(event, line_bot_api)
         return
     # FAQ/品牌故事自動回覆
     elif user_message in FAQ_ANSWERS:
@@ -117,7 +109,7 @@ def handle_message(event):
         # 預設回應
         line_bot_api.reply_message(
             event.reply_token,
-            TextSendMessage(text="您好！我是次妹，想買麻糬嗎？輸入『我要買麻糬』開始訂購流程，或輸入『天氣』『玩遊戲』『陪我聊聊』體驗更多功能！")
+            TextSendMessage(text="您好！我是次妹，想買麻糬嗎？輸入『買麻糬』開始訂購流程，或輸入『天氣』『陪我聊聊』體驗更多功能！")
         )
         return
 
