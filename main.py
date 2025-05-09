@@ -1,7 +1,7 @@
 from flask import Flask, request, abort
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
-from linebot.models import TextSendMessage, MessageEvent, TextMessage, FollowEvent
+from linebot.models import TextSendMessage, MessageEvent, TextMessage, FollowEvent, JoinEvent, FlexSendMessage
 import os
 
 from config.env import LINE_CHANNEL_ACCESS_TOKEN, LINE_CHANNEL_SECRET
@@ -33,14 +33,22 @@ def webhook():
 
 @handler.add(FollowEvent)
 def handle_follow(event):
-    print('[DEBUG] FollowEvent 觸發，發送歡迎詞')
+    print('[INFO] FollowEvent triggered')
     welcome_text = (
-        "🎉 歡迎加入次妹手工麻糬BOT！\n"
-        "我是次妹，Q彈的麻糬就像生活裡的小確幸～\n"
-        "輸入『買麻糬』開始訂購，或輸入『天氣』『陪我聊聊』體驗更多有趣功能！\n"
-        "品牌故事、保存方式、營業時間都可以問我唷！"
+        "🌿 Welcome to Cimei Handmade Mochi!  \n"
+        "This mochi isn't machine-pressed — it's kneaded with time and care.  \n"
+        "Type \"買麻糬\" to start your order 🍡"
     )
     line_bot_api.reply_message(event.reply_token, TextSendMessage(text=welcome_text))
+
+@handler.add(JoinEvent)
+def handle_join(event):
+    print('[INFO] JoinEvent triggered')
+    join_text = (
+        "👋 Hi everyone, I'm 次妹手工麻糬 BOT!  \n"
+        "Type \"買麻糬\" to place a mochi order in this group 🍡"
+    )
+    line_bot_api.reply_message(event.reply_token, TextSendMessage(text=join_text))
 
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
@@ -63,8 +71,22 @@ def handle_message(event):
     ]
     # 訂購流程（只在明確訂單關鍵字時觸發）
     if user_message in ["我要買麻糬", "買麻糬", "訂購麻糬"]:
-        print("[DEBUG] 進入訂單流程（表格填寫）")
-        handle_order_flow(event)
+        print("[DEBUG] 進入訂單 Flex Message 流程")
+        flex_content = {
+            "type": "bubble",
+            "body": {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [
+                    {"type": "text", "text": "Please reply using this format:", "weight": "bold", "size": "md"},
+                    {"type": "text", "text": "- 口味：花生 / 芝麻 / 綠豆"},
+                    {"type": "text", "text": "- 數量：2盒"},
+                    {"type": "text", "text": "- 取貨方式：自取 / 派送（加收50元）"},
+                    {"type": "text", "text": "- 地址：若選派送，請填寫完整地址"}
+                ]
+            }
+        }
+        line_bot_api.reply_message(event.reply_token, FlexSendMessage(alt_text="訂單填寫說明", contents=flex_content))
         return
     # 天氣查詢
     elif any(key in user_message for key in ["天氣", "天氣推薦"]):
