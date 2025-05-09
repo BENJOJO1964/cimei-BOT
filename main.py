@@ -48,9 +48,20 @@ def webhook():
         abort(400)
     return 'OK'
 
+@handler.add(FollowEvent)
+def handle_follow(event):
+    welcome_text = (
+        "🎉 歡迎加入次妹手工麻糬BOT！\n"
+        "我是次妹，Q彈的麻糬就像生活裡的小確幸～\n"
+        "輸入『我要買麻糬』開始訂購，或輸入『天氣』『玩遊戲』體驗更多有趣功能！\n"
+        "品牌故事、保存方式、營業時間都可以問我唷！"
+    )
+    line_bot_api.reply_message(event.reply_token, TextSendMessage(text=welcome_text))
+
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
     user_message = event.message.text.strip()
+    print(f"[DEBUG] 收到訊息: {user_message}")
     # FAQ/品牌故事快取（可擴充）
     FAQ_ANSWERS = {
         "品牌故事": "次妹手工麻糬創立於2020年，堅持手作、天然、無添加，陪伴你每一個溫暖時刻。",
@@ -66,9 +77,11 @@ def handle_message(event):
         "除了麻糬，我也喜歡和你聊聊生活小事，歡迎隨時找我喔！",
         "如果你想知道麻糬的故事、吃法或保存方法，都可以問我唷！"
     ]
-    # 訂購流程
+    # 訂購流程（只在明確訂單關鍵字時觸發）
     if user_message in ["我要買麻糬", "買麻糬", "訂購麻糬"]:
+        print("[DEBUG] 進入訂單流程")
         handle_order_flow(event)
+        return
     # 天氣查詢
     elif any(key in user_message for key in ["天氣", "天氣推薦"]):
         city = "臺北市"
@@ -77,38 +90,35 @@ def handle_message(event):
                 city = c.replace("台", "臺") + "市"
         reply = get_weather_and_recommend(city)
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply))
+        return
     # 小遊戲
     elif user_message in ["玩遊戲", "麻糬遊戲", "猜口味"]:
         start_game(event, line_bot_api)
+        return
     elif user_message in ["紅豆", "花生", "芝麻", "芋頭", "紫米"]:
         handle_game_answer(event, line_bot_api)
+        return
     # FAQ/品牌故事自動回覆
     elif user_message in FAQ_ANSWERS:
         reply = FAQ_ANSWERS[user_message]
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply))
+        return
     # 預設聊天內容（本地回覆，不送 GPT）
     elif user_message in CHAT_RESPONSES:
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text=user_message))
+        return
     # 陪聊模式（只有這裡才送 GPT）
     elif user_message in ["陪我聊聊", "聊天", "聊聊"] or len(user_message) > 2:
         reply = chat_with_user(user_message)
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply))
+        return
     else:
         # 預設回應
         line_bot_api.reply_message(
             event.reply_token,
             TextSendMessage(text="您好！我是次妹，想買麻糬嗎？輸入『我要買麻糬』開始訂購流程，或輸入『天氣』『玩遊戲』『陪我聊聊』體驗更多功能！")
         )
-
-@handler.add(FollowEvent)
-def handle_follow(event):
-    welcome_text = (
-        "🎉 歡迎加入次妹手工麻糬BOT！\n"
-        "我是次妹，Q彈的麻糬就像生活裡的小確幸～\n"
-        "輸入『我要買麻糬』開始訂購，或輸入『天氣』『玩遊戲』體驗更多有趣功能！\n"
-        "品牌故事、保存方式、營業時間都可以問我唷！"
-    )
-    line_bot_api.reply_message(event.reply_token, TextSendMessage(text=welcome_text))
+        return
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=5001) 
