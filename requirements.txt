@@ -7,3 +7,4 @@ lunarcalendar
 gspread
 oauth2client
 openai>=1.2.0 
+gunicorn
