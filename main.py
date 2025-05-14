@@ -94,13 +94,15 @@ def handle_message(event):
             # 取得明天日期（台灣時區）
             tz_delta = timedelta(hours=8)
             tomorrow = (datetime.utcnow() + tz_delta + timedelta(days=1)).strftime('%A').lower()
-            # 對應英文星期到中文
             weekday_map = {
                 'monday': '星期一', 'tuesday': '星期二', 'wednesday': '星期三', 'thursday': '星期四', 'friday': '星期五', 'saturday': '星期六', 'sunday': '星期日'
             }
             tomorrow_zh = weekday_map.get(tomorrow, tomorrow)
+            print(f"[DEBUG] 明天中文星期: {tomorrow_zh}")
+            print(f"[DEBUG] 讀到的 rows: {rows}")
             found = False
             for row in rows:
+                # 注意欄位名稱完全一致
                 if tomorrow_zh in str(row.get('星期 weekdays')):
                     location = row.get('擺攤地點 location')
                     timing = row.get('時間 timing')
@@ -114,7 +116,9 @@ def handle_message(event):
                 msg = f"抱歉，明天（{tomorrow_zh}）暫無擺攤資訊，請稍後再查詢或聯絡店家。"
             line_bot_api.reply_message(event.reply_token, TextSendMessage(text=msg))
         except Exception as e:
+            import traceback
             print(f"[ERROR] 查詢明天擺攤地點失敗: {e}")
+            traceback.print_exc()
             line_bot_api.reply_message(event.reply_token, TextSendMessage(text="抱歉，查詢明天擺攤地點時發生錯誤，請稍後再試！"))
         return
     # 買麻糬相關關鍵字統一回覆
