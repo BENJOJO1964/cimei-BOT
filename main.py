@@ -67,7 +67,7 @@ def handle_member_joined(event):
 def handle_message(event):
     user_message = event.message.text.strip()
     print(f"[DEBUG] 收到訊息: {user_message}")
-    # Debug: 回傳群組ID
+    # Debug: 回傳群組ID（務必最優先判斷）
     if event.source.type == "group" and user_message.lower() == "gid":
         print("✅ 收到來自群組的訊息")
         print("✅ 群組 ID：", event.source.group_id)
