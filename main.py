@@ -1,7 +1,7 @@
 from flask import Flask, request, abort
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
-from linebot.models import TextSendMessage, MessageEvent, TextMessage, FollowEvent, JoinEvent, FlexSendMessage
+from linebot.models import TextSendMessage, MessageEvent, TextMessage, FollowEvent, JoinEvent, FlexSendMessage, MemberJoinedEvent
 import os
 
 from config.env import LINE_CHANNEL_ACCESS_TOKEN, LINE_CHANNEL_SECRET
@@ -51,18 +51,37 @@ def handle_join(event):
     )
     line_bot_api.reply_message(event.reply_token, TextSendMessage(text=join_text))
 
+@handler.add(MemberJoinedEvent)
+def handle_member_joined(event):
+    try:
+        group_id = event.source.group_id
+        user_id = event.joined.members[0].user_id
+        profile = line_bot_api.get_group_member_profile(group_id, user_id)
+        member_name = profile.display_name
+        welcome_text = f"熱烈歡迎 {member_name} 加入《次妹手工麻糬群》🥳\n每天會公佈擺攤地點，也可以直接問「今天在哪擺？」唷～📍"
+        line_bot_api.reply_message(event.reply_token, TextSendMessage(text=welcome_text))
+    except Exception as e:
+        print(f"[ERROR] MemberJoinedEvent: {e}")
+
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
     user_message = event.message.text.strip()
     print(f"[DEBUG] 收到訊息: {user_message}")
-    # FAQ/品牌故事快取（可擴充）
+    # Debug: 回傳群組ID
+    if event.source.type == "group" and user_message.lower() == "gid":
+        print("✅ 收到來自群組的訊息")
+        print("✅ 群組 ID：", event.source.group_id)
+        line_bot_api.reply_message(
+            event.reply_token,
+            TextSendMessage(text=f"本群組的 groupId 是：\n{event.source.group_id}")
+        )
+        return
     FAQ_ANSWERS = {
         "品牌故事": "次妹手工麻糬創立於2020年，堅持手作、天然、無添加，陪伴你每一個溫暖時刻。",
         "麻糬保存": "麻糬建議冷藏保存2天內食用完畢，口感最佳。",
         "營業時間": "每日10:00-18:00，歡迎來店選購！",
         "常見問題": "歡迎詢問：品牌故事、麻糬保存、營業時間、訂購方式等。"
     }
-    # handlers/gpt_chat.py 的預設聊天內容
     CHAT_RESPONSES = [
         "嗨，我是次妹～有什麼想聊的嗎？不管是麻糬還是生活都可以問我喔！",
         "你知道嗎？麻糬的Q彈口感，其實跟天氣也有點關係呢～想聽更多嗎？",
@@ -70,27 +89,8 @@ def handle_message(event):
         "除了麻糬，我也喜歡和你聊聊生活小事，歡迎隨時找我喔！",
         "如果你想知道麻糬的故事、吃法或保存方法，都可以問我唷！"
     ]
-    # 訂購流程（只在明確訂單關鍵字時觸發）
-    if user_message in ["我要買麻糬", "買麻糬", "訂購麻糬"]:
-        print("[DEBUG] 進入訂單 Flex Message 流程")
-        flex_content = {
-            "type": "bubble",
-            "body": {
-                "type": "box",
-                "layout": "vertical",
-                "contents": [
-                    {"type": "text", "text": "Please reply using this format:", "weight": "bold", "size": "md"},
-                    {"type": "text", "text": "- 口味：花生 / 芝麻 / 紅豆 / 棗泥 / 芋泥 / 咖哩"},
-                    {"type": "text", "text": "- 數量：2盒"},
-                    {"type": "text", "text": "- 取貨方式：自取 / 派送（加收50元）"},
-                    {"type": "text", "text": "- 地址：若選派送，請填寫完整地址"}
-                ]
-            }
-        }
-        line_bot_api.reply_message(event.reply_token, FlexSendMessage(alt_text="訂單填寫說明", contents=flex_content))
-        return
     # 天氣查詢
-    elif any(key in user_message for key in ["天氣", "天氣推薦"]):
+    if any(key in user_message for key in ["天氣", "天氣推薦"]):
         city = "臺北市"
         for c in ["台北", "新北", "台中", "高雄", "台南", "桃園", "新竹", "基隆", "嘉義", "彰化", "屏東", "宜蘭", "花蓮", "台東", "苗栗", "雲林", "南投"]:
             if c in user_message:
@@ -116,7 +116,7 @@ def handle_message(event):
         # 預設回應
         line_bot_api.reply_message(
             event.reply_token,
-            TextSendMessage(text="您好！我是次妹，想買麻糬嗎？輸入『買麻糬』開始訂購流程，或輸入『天氣』『陪我聊聊』體驗更多功能！")
+            TextSendMessage(text="您好！我是次妹，想買麻糬嗎？輸入『天氣』『陪我聊聊』體驗更多功能！")
         )
         return
 
