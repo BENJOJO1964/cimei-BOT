@@ -6,6 +6,7 @@ import os
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 from datetime import datetime, timedelta
+import json
 
 from config.env import LINE_CHANNEL_ACCESS_TOKEN, LINE_CHANNEL_SECRET
 # from handlers.order_flow import handle_order_flow  # 已刪除，不再匯入
@@ -82,12 +83,13 @@ def handle_message(event):
     # 查詢明天擺攤地點
     if any(k in user_message for k in ["明天在哪擺攤", "明天在哪裡", "明天攤位"]):
         try:
-            # Google Sheets API 驗證
+            # Google Sheets API 驗證（用環境變數）
             scope = [
                 'https://spreadsheets.google.com/feeds',
                 'https://www.googleapis.com/auth/drive',
             ]
-            creds = ServiceAccountCredentials.from_json_keyfile_name(os.getenv("GCP_KEY_PATH", "gcp_key.json"), scope)
+            gcp_key_json = os.getenv("GCP_KEY_JSON")
+            creds = ServiceAccountCredentials.from_json_keyfile_dict(json.loads(gcp_key_json), scope)
             client = gspread.authorize(creds)
             sheet = client.open_by_key(os.getenv("GOOGLE_SHEET_ID")).sheet1
             rows = sheet.get_all_records()
@@ -102,7 +104,6 @@ def handle_message(event):
             print(f"[DEBUG] 讀到的 rows: {rows}")
             found = False
             for row in rows:
-                # 注意欄位名稱完全一致
                 if tomorrow_zh in str(row.get('星期 weekdays')):
                     location = row.get('擺攤地點 location')
                     timing = row.get('時間 timing')
