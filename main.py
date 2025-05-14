@@ -3,6 +3,9 @@ from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
 from linebot.models import TextSendMessage, MessageEvent, TextMessage, FollowEvent, JoinEvent, FlexSendMessage, MemberJoinedEvent
 import os
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
+from datetime import datetime, timedelta
 
 from config.env import LINE_CHANNEL_ACCESS_TOKEN, LINE_CHANNEL_SECRET
 # from handlers.order_flow import handle_order_flow  # 已刪除，不再匯入
@@ -75,6 +78,44 @@ def handle_message(event):
             event.reply_token,
             TextSendMessage(text=f"本群組的 groupId 是：\n{event.source.group_id}")
         )
+        return
+    # 查詢明天擺攤地點
+    if any(k in user_message for k in ["明天在哪擺攤", "明天在哪裡", "明天攤位"]):
+        try:
+            # Google Sheets API 驗證
+            scope = [
+                'https://spreadsheets.google.com/feeds',
+                'https://www.googleapis.com/auth/drive',
+            ]
+            creds = ServiceAccountCredentials.from_json_keyfile_name(os.getenv("GCP_KEY_PATH", "gcp_key.json"), scope)
+            client = gspread.authorize(creds)
+            sheet = client.open_by_key(os.getenv("GOOGLE_SHEET_ID")).sheet1
+            rows = sheet.get_all_records()
+            # 取得明天日期（台灣時區）
+            tz_delta = timedelta(hours=8)
+            tomorrow = (datetime.utcnow() + tz_delta + timedelta(days=1)).strftime('%A').lower()
+            # 對應英文星期到中文
+            weekday_map = {
+                'monday': '星期一', 'tuesday': '星期二', 'wednesday': '星期三', 'thursday': '星期四', 'friday': '星期五', 'saturday': '星期六', 'sunday': '星期日'
+            }
+            tomorrow_zh = weekday_map.get(tomorrow, tomorrow)
+            found = False
+            for row in rows:
+                if tomorrow_zh in str(row.get('星期 weekdays')):
+                    location = row.get('擺攤地點 location')
+                    timing = row.get('時間 timing')
+                    remark = row.get('備註 remark')
+                    msg = f"明天（{tomorrow_zh}）擺攤地點：\n地點：{location}\n時間：{timing}"
+                    if remark:
+                        msg += f"\n備註：{remark}"
+                    found = True
+                    break
+            if not found:
+                msg = f"抱歉，明天（{tomorrow_zh}）暫無擺攤資訊，請稍後再查詢或聯絡店家。"
+            line_bot_api.reply_message(event.reply_token, TextSendMessage(text=msg))
+        except Exception as e:
+            print(f"[ERROR] 查詢明天擺攤地點失敗: {e}")
+            line_bot_api.reply_message(event.reply_token, TextSendMessage(text="抱歉，查詢明天擺攤地點時發生錯誤，請稍後再試！"))
         return
     # 買麻糬相關關鍵字統一回覆
     if any(k in user_message for k in ["買麻糬", "我要買麻糬", "訂購麻糬"]):
