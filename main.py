@@ -5,7 +5,7 @@ from linebot.models import TextSendMessage, MessageEvent, TextMessage, FollowEve
 import os
 
 from config.env import LINE_CHANNEL_ACCESS_TOKEN, LINE_CHANNEL_SECRET
-from handlers.order_flow import handle_order_flow
+# from handlers.order_flow import handle_order_flow  # 已刪除，不再匯入
 from handlers.weather import get_weather_and_recommend
 from handlers.gpt_chat import chat_with_user
 
