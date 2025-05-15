@@ -87,6 +87,33 @@ def handle_message(event):
             TextSendMessage(text=f"本群組的 groupId 是：\n{event.source.group_id}")
         )
         return
+    # 日期關鍵字解析
+    def get_target_weekday(user_message):
+        # 取得今天的星期索引（0=星期一, 6=星期日）
+        tz_delta = timedelta(hours=8)
+        today_dt = datetime.utcnow() + tz_delta
+        weekday_map = ['星期一', '星期二', '星期三', '星期四', '星期五', '星期六', '星期日']
+        weekday_idx = today_dt.weekday()
+        # 關鍵字對應天數偏移
+        if '後天' in user_message:
+            target_idx = (weekday_idx + 2) % 7
+            return weekday_map[target_idx]
+        if '明天' in user_message:
+            target_idx = (weekday_idx + 1) % 7
+            return weekday_map[target_idx]
+        if '今天' in user_message:
+            return weekday_map[weekday_idx]
+        if '昨天' in user_message:
+            target_idx = (weekday_idx - 1) % 7
+            return weekday_map[target_idx]
+        if '前天' in user_message:
+            target_idx = (weekday_idx - 2) % 7
+            return weekday_map[target_idx]
+        # 支援直接問星期幾
+        for i, w in enumerate(weekday_map):
+            if w in user_message:
+                return w
+        return None
     # 查詢明天擺攤地點
     if any(k in user_message for k in ["明天在哪擺攤", "明天在哪裡", "明天攤位"]):
         try:
@@ -188,8 +215,9 @@ def handle_message(event):
         reply = template.format(city=city.replace("市", ""), weather=weather, flavor=flavor) + f"\n目前溫度：{temp}°C"
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply))
         return
-    # 買麻糬/麻薯相關關鍵字統一回覆（自動查詢今天擺攤地點，不包含口味詢問）
+    # 買麻糬/麻薯/擺攤相關問題自動查詢對應日期
     if any(k in user_message for k in buy_mochi_keywords) or (any(k in user_message for k in mochi_keywords) and not any(x in user_message for x in ["口味", "有什麼口味", "有哪些口味", "麻糬口味", "麻薯口味"])):
+        target_weekday = get_target_weekday(user_message)
         try:
             scope = [
                 'https://spreadsheets.google.com/feeds',
@@ -201,26 +229,26 @@ def handle_message(event):
             sheet = client.open_by_key(os.getenv("GOOGLE_SHEET_ID")).sheet1
             rows = sheet.get_all_records()
             tz_delta = timedelta(hours=8)
-            today = (datetime.utcnow() + tz_delta).strftime('%A').lower()
-            weekday_map = {
-                'monday': '星期一', 'tuesday': '星期二', 'wednesday': '星期三', 'thursday': '星期四', 'friday': '星期五', 'saturday': '星期六', 'sunday': '星期日'
-            }
-            today_zh = weekday_map.get(today, today)
+            today_dt = datetime.utcnow() + tz_delta
+            weekday_map = ['星期一', '星期二', '星期三', '星期四', '星期五', '星期六', '星期日']
+            # 預設查今天
+            if not target_weekday:
+                target_weekday = weekday_map[today_dt.weekday()]
             found = False
             for row in rows:
-                if today_zh in str(row.get('星期 weekdays')):
+                if target_weekday in str(row.get('星期 weekdays')):
                     location = row.get('擺攤地點 location')
                     msg = f"嗨，感謝您對麻糬的喜愛，歡迎您到{location}我們攤位購買，另外，我們會建立外送服務喔！🍡"
                     found = True
                     break
             if not found:
-                msg = "嗨，感謝您對麻糬的喜愛，目前暫無擺攤資訊，敬請期待外送服務上線！🍡"
+                msg = f"嗨，感謝您對麻糬的喜愛，目前{target_weekday}暫無擺攤資訊，敬請期待外送服務上線！🍡"
             line_bot_api.reply_message(event.reply_token, TextSendMessage(text=msg))
         except Exception as e:
             import traceback
-            print(f"[ERROR] 查詢今天擺攤地點(買麻糬)失敗: {e}")
+            print(f"[ERROR] 查詢{target_weekday}擺攤地點(買麻糬)失敗: {e}")
             traceback.print_exc()
-            line_bot_api.reply_message(event.reply_token, TextSendMessage(text="嗨，感謝您對麻糬的喜愛，目前查詢擺攤地點時發生錯誤，敬請期待外送服務上線！"))
+            line_bot_api.reply_message(event.reply_token, TextSendMessage(text=f"嗨，感謝您對麻糬的喜愛，目前查詢{target_weekday}擺攤地點時發生錯誤，敬請期待外送服務上線！"))
         return
     FAQ_ANSWERS = {
         "品牌故事": "次妹手工麻糬創立於2020年，堅持手作、天然、無添加，陪伴你每一個溫暖時刻。",
