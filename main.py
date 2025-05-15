@@ -184,11 +184,10 @@ def handle_message(event):
         # 取得天氣、推薦口味與品牌形容語
         from handlers.weather import get_weather
         weather, key, temp = get_weather(city)
-        from handlers.weather import recommend_flavor_by_weather, RECOMMEND_TEMPLATES
+        from handlers.weather import recommend_flavor_by_weather
         flavor = recommend_flavor_by_weather(key)
-        import random
-        template = random.choice(RECOMMEND_TEMPLATES)
-        reply = template.format(city=city.replace("市", ""), weather=weather, flavor=flavor) + f"\n目前溫度：{temp}°C"
+        # 使用固定模板，不使用隨機選擇
+        reply = f"{city.replace('市', '')}今天天氣{weather}，很適合來份{flavor}麻糬，讓心情更美好！\n目前溫度：{temp}°C"
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply))
         return
     FAQ_ANSWERS = {
@@ -197,13 +196,12 @@ def handle_message(event):
         "營業時間": "每日10:00-18:00，歡迎來店選購！",
         "常見問題": "歡迎詢問：品牌故事、麻糬保存、營業時間、訂購方式等。"
     }
-    CHAT_RESPONSES = [
-        "嗨，我是次妹～有什麼想聊的嗎？不管是麻糬還是生活都可以問我喔！",
-        "你知道嗎？麻糬的Q彈口感，其實跟天氣也有點關係呢～想聽更多嗎？",
-        "有時候心情不好，吃顆麻糬就會變好一點呢。你今天還好嗎？",
-        "除了麻糬，我也喜歡和你聊聊生活小事，歡迎隨時找我喔！",
-        "如果你想知道麻糬的故事、吃法或保存方法，都可以問我唷！"
-    ]
+    # 固定聊天回應，不使用隨機選擇
+    CHAT_RESPONSES = {
+        "陪我聊聊": "嗨，我是次妹～有什麼想聊的嗎？不管是麻糬還是生活都可以問我喔！",
+        "聊天": "嗨，我是次妹～有什麼想聊的嗎？不管是麻糬還是生活都可以問我喔！",
+        "聊聊": "嗨，我是次妹～有什麼想聊的嗎？不管是麻糬還是生活都可以問我喔！"
+    }
     # FAQ/品牌故事自動回覆
     if user_message in FAQ_ANSWERS:
         reply = FAQ_ANSWERS[user_message]
@@ -211,11 +209,11 @@ def handle_message(event):
         return
     # 預設聊天內容（本地回覆，不送 GPT）
     if user_message in CHAT_RESPONSES:
-        line_bot_api.reply_message(event.reply_token, TextSendMessage(text=user_message))
+        line_bot_api.reply_message(event.reply_token, TextSendMessage(text=CHAT_RESPONSES[user_message]))
         return
-    # 陪聊模式（只有這裡才送 GPT）
-    if user_message in ["陪我聊聊", "聊天", "聊聊"] or len(user_message) > 2:
-        reply = chat_with_user(user_message)
+    # 陪聊模式（使用固定回覆，不送 GPT）
+    if len(user_message) > 2:
+        reply = "嗨，我是次妹～有什麼想聊的嗎？不管是麻糬還是生活都可以問我喔！"
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply))
         return
     # 預設回應
