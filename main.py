@@ -197,7 +197,21 @@ def handle_message(event):
             import traceback
             print(f"[ERROR] 查詢今天擺攤地點(買麻糬)失敗: {e}")
             traceback.print_exc()
-            line_bot_api.reply_message(event.reply_token, TextSendMessage(text="嗨，感謝您對麻糬的喜愛，目前查詢擺攤地點時發生錯誤，敬請期待外送服務上線！��"))
+            line_bot_api.reply_message(event.reply_token, TextSendMessage(text="嗨，感謝您對麻糬的喜愛，目前查詢擺攤地點時發生錯誤，敬請期待外送服務上線！"))
+        return
+    # 麻糬口味詢問專屬回覆
+    if any(k in user_message for k in ["麻糬口味", "口味", "有什麼口味", "有哪些口味"]):
+        reply = "我們有6種口味：花生、芝麻、芋泥、棗泥、紅豆、咖哩，歡迎選購！"
+        line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply))
+        return
+    # 天氣查詢
+    if any(key in user_message for key in ["天氣", "天氣推薦"]):
+        city = "臺北市"
+        for c in ["台北", "新北", "台中", "高雄", "台南", "桃園", "新竹", "基隆", "嘉義", "彰化", "屏東", "宜蘭", "花蓮", "台東", "苗栗", "雲林", "南投"]:
+            if c in user_message:
+                city = c.replace("台", "臺") + "市"
+        reply = get_weather_and_recommend(city)
+        line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply + "\n（本口味推薦依據今日天氣自動選擇）"))
         return
     FAQ_ANSWERS = {
         "品牌故事": "次妹手工麻糬創立於2020年，堅持手作、天然、無添加，陪伴你每一個溫暖時刻。",
@@ -212,15 +226,6 @@ def handle_message(event):
         "除了麻糬，我也喜歡和你聊聊生活小事，歡迎隨時找我喔！",
         "如果你想知道麻糬的故事、吃法或保存方法，都可以問我唷！"
     ]
-    # 天氣查詢
-    if any(key in user_message for key in ["天氣", "天氣推薦"]):
-        city = "臺北市"
-        for c in ["台北", "新北", "台中", "高雄", "台南", "桃園", "新竹", "基隆", "嘉義", "彰化", "屏東", "宜蘭", "花蓮", "台東", "苗栗", "雲林", "南投"]:
-            if c in user_message:
-                city = c.replace("台", "臺") + "市"
-        reply = get_weather_and_recommend(city)
-        line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply))
-        return
     # FAQ/品牌故事自動回覆
     elif user_message in FAQ_ANSWERS:
         reply = FAQ_ANSWERS[user_message]
