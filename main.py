@@ -227,26 +227,25 @@ def handle_message(event):
         "如果你想知道麻糬的故事、吃法或保存方法，都可以問我唷！"
     ]
     # FAQ/品牌故事自動回覆
-    elif user_message in FAQ_ANSWERS:
+    if user_message in FAQ_ANSWERS:
         reply = FAQ_ANSWERS[user_message]
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply))
         return
     # 預設聊天內容（本地回覆，不送 GPT）
-    elif user_message in CHAT_RESPONSES:
+    if user_message in CHAT_RESPONSES:
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text=user_message))
         return
     # 陪聊模式（只有這裡才送 GPT）
-    elif user_message in ["陪我聊聊", "聊天", "聊聊"] or len(user_message) > 2:
+    if user_message in ["陪我聊聊", "聊天", "聊聊"] or len(user_message) > 2:
         reply = chat_with_user(user_message)
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply))
         return
-    else:
-        # 預設回應
-        line_bot_api.reply_message(
-            event.reply_token,
-            TextSendMessage(text="您好！我是次妹，想買麻糬嗎？輸入『天氣』『陪我聊聊』體驗更多功能！")
-        )
-        return
+    # 預設回應
+    line_bot_api.reply_message(
+        event.reply_token,
+        TextSendMessage(text="您好！我是次妹，想買麻糬嗎？輸入『天氣』『陪我聊聊』體驗更多功能！")
+    )
+    return
 
 @handler.default()
 def default(event):
