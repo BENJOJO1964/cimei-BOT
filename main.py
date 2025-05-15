@@ -62,7 +62,7 @@ def handle_member_joined(event):
         user_id = event.joined.members[0].user_id
         profile = line_bot_api.get_group_member_profile(group_id, user_id)
         member_name = profile.display_name
-        welcome_text = f"熱烈歡迎 {member_name} 加入《次妹手工麻糬群》🥳\n每天會公佈擺攤地點，也可以直接問「今天在哪擺？」唷～📍"
+        welcome_text = f"熱烈歡迎 {member_name} 加入《次妹手工麻糬群》🥳\n每天會公佈擺攤地點，也可以直接問「今天在哪擺攤？」，以後我們會建立預訂外送服務唷～📍"
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text=welcome_text))
     except Exception as e:
         print(f"[ERROR] MemberJoinedEvent: {e}")
