@@ -127,10 +127,77 @@ def handle_message(event):
             traceback.print_exc()
             line_bot_api.reply_message(event.reply_token, TextSendMessage(text="抱歉，查詢明天擺攤地點時發生錯誤，請稍後再試！"))
         return
-    # 買麻糬相關關鍵字統一回覆
-    if any(k in user_message for k in ["買麻糬", "我要買麻糬", "訂購麻糬"]):
-        reply = "嗨，感謝您對麻糬的喜愛，歡迎您到我們今天擺攤的位置購買，另外，我們正在建立外送系統喔🍡"
-        line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply))
+    # 查詢今天擺攤地點
+    if any(k in user_message for k in ["今天在哪擺攤", "今天在哪裡", "今天攤位"]):
+        try:
+            scope = [
+                'https://spreadsheets.google.com/feeds',
+                'https://www.googleapis.com/auth/drive',
+            ]
+            gcp_key_json = os.getenv("GCP_KEY_JSON")
+            creds = ServiceAccountCredentials.from_json_keyfile_dict(json.loads(gcp_key_json), scope)
+            client = gspread.authorize(creds)
+            sheet = client.open_by_key(os.getenv("GOOGLE_SHEET_ID")).sheet1
+            rows = sheet.get_all_records()
+            tz_delta = timedelta(hours=8)
+            today = (datetime.utcnow() + tz_delta).strftime('%A').lower()
+            weekday_map = {
+                'monday': '星期一', 'tuesday': '星期二', 'wednesday': '星期三', 'thursday': '星期四', 'friday': '星期五', 'saturday': '星期六', 'sunday': '星期日'
+            }
+            today_zh = weekday_map.get(today, today)
+            found = False
+            for row in rows:
+                if today_zh in str(row.get('星期 weekdays')):
+                    location = row.get('擺攤地點 location')
+                    timing = row.get('時間 timing')
+                    remark = row.get('備註 remark')
+                    msg = f"今天（{today_zh}）擺攤地點：\n地點：{location}\n時間：{timing}"
+                    if remark:
+                        msg += f"\n備註：{remark}"
+                    found = True
+                    break
+            if not found:
+                msg = f"抱歉，今天（{today_zh}）暫無擺攤資訊，請稍後再查詢或聯絡店家。"
+            line_bot_api.reply_message(event.reply_token, TextSendMessage(text=msg))
+        except Exception as e:
+            import traceback
+            print(f"[ERROR] 查詢今天擺攤地點失敗: {e}")
+            traceback.print_exc()
+            line_bot_api.reply_message(event.reply_token, TextSendMessage(text="抱歉，查詢今天擺攤地點時發生錯誤，請稍後再試！"))
+        return
+    # 買麻糬相關關鍵字統一回覆（自動查詢今天擺攤地點）
+    if any(k in user_message for k in ["買麻糬", "我要買麻糬", "我們要買麻糬", "到哪買麻糬", "麻糬口味"]) or "麻糬" in user_message:
+        try:
+            scope = [
+                'https://spreadsheets.google.com/feeds',
+                'https://www.googleapis.com/auth/drive',
+            ]
+            gcp_key_json = os.getenv("GCP_KEY_JSON")
+            creds = ServiceAccountCredentials.from_json_keyfile_dict(json.loads(gcp_key_json), scope)
+            client = gspread.authorize(creds)
+            sheet = client.open_by_key(os.getenv("GOOGLE_SHEET_ID")).sheet1
+            rows = sheet.get_all_records()
+            tz_delta = timedelta(hours=8)
+            today = (datetime.utcnow() + tz_delta).strftime('%A').lower()
+            weekday_map = {
+                'monday': '星期一', 'tuesday': '星期二', 'wednesday': '星期三', 'thursday': '星期四', 'friday': '星期五', 'saturday': '星期六', 'sunday': '星期日'
+            }
+            today_zh = weekday_map.get(today, today)
+            found = False
+            for row in rows:
+                if today_zh in str(row.get('星期 weekdays')):
+                    location = row.get('擺攤地點 location')
+                    msg = f"嗨，感謝您對麻糬的喜愛，歡迎您到{location}購買，另外，我們會建立外送服務喔！🍡"
+                    found = True
+                    break
+            if not found:
+                msg = "嗨，感謝您對麻糬的喜愛，目前暫無擺攤資訊，敬請期待外送服務上線！🍡"
+            line_bot_api.reply_message(event.reply_token, TextSendMessage(text=msg))
+        except Exception as e:
+            import traceback
+            print(f"[ERROR] 查詢今天擺攤地點(買麻糬)失敗: {e}")
+            traceback.print_exc()
+            line_bot_api.reply_message(event.reply_token, TextSendMessage(text="嗨，感謝您對麻糬的喜愛，目前查詢擺攤地點時發生錯誤，敬請期待外送服務上線！��"))
         return
     FAQ_ANSWERS = {
         "品牌故事": "次妹手工麻糬創立於2020年，堅持手作、天然、無添加，陪伴你每一個溫暖時刻。",
