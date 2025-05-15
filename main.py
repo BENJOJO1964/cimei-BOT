@@ -170,6 +170,15 @@ def handle_message(event):
         reply = "我們有6種口味：花生、芝麻、芋泥、棗泥、紅豆、咖哩，歡迎選購！"
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply))
         return
+    # 天氣查詢（強化 trigger 條件）
+    if ("天氣" in user_message) or any(k in user_message for k in ["天氣怎麼樣", "天氣如何", "天氣查詢", "天氣推薦"]):
+        city = "臺北市"
+        for c in ["台北", "新北", "台中", "高雄", "台南", "桃園", "新竹", "基隆", "嘉義", "彰化", "屏東", "宜蘭", "花蓮", "台東", "苗栗", "雲林", "南投"]:
+            if c in user_message:
+                city = c.replace("台", "臺") + "市"
+        reply = get_weather_and_recommend(city)
+        line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply))
+        return
     # 買麻糬相關關鍵字統一回覆（自動查詢今天擺攤地點，不包含麻糬口味）
     if any(k in user_message for k in ["買麻糬", "我要買麻糬", "我們要買麻糬", "到哪買麻糬"]) or ("麻糬" in user_message and not any(x in user_message for x in ["口味", "有什麼口味", "有哪些口味"])):
         try:
@@ -203,15 +212,6 @@ def handle_message(event):
             print(f"[ERROR] 查詢今天擺攤地點(買麻糬)失敗: {e}")
             traceback.print_exc()
             line_bot_api.reply_message(event.reply_token, TextSendMessage(text="嗨，感謝您對麻糬的喜愛，目前查詢擺攤地點時發生錯誤，敬請期待外送服務上線！"))
-        return
-    # 天氣查詢
-    if any(key in user_message for key in ["天氣", "天氣推薦"]):
-        city = "臺北市"
-        for c in ["台北", "新北", "台中", "高雄", "台南", "桃園", "新竹", "基隆", "嘉義", "彰化", "屏東", "宜蘭", "花蓮", "台東", "苗栗", "雲林", "南投"]:
-            if c in user_message:
-                city = c.replace("台", "臺") + "市"
-        reply = get_weather_and_recommend(city)
-        line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply + "\n（本口味推薦依據今日天氣自動選擇）"))
         return
     FAQ_ANSWERS = {
         "品牌故事": "次妹手工麻糬創立於2020年，堅持手作、天然、無添加，陪伴你每一個溫暖時刻。",
