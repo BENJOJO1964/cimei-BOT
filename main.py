@@ -187,7 +187,7 @@ def handle_message(event):
             for row in rows:
                 if today_zh in str(row.get('星期 weekdays')):
                     location = row.get('擺攤地點 location')
-                    msg = f"嗨，感謝您對麻糬的喜愛，歡迎您到{location}購買，另外，我們會建立外送服務喔！🍡"
+                    msg = f"嗨，感謝您對麻糬的喜愛，歡迎您到{location}我們攤位購買，另外，我們會建立外送服務喔！🍡"
                     found = True
                     break
             if not found:
