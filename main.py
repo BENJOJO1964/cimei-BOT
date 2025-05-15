@@ -89,12 +89,10 @@ def handle_message(event):
         return
     # 日期關鍵字解析
     def get_target_weekday(user_message):
-        # 取得今天的星期索引（0=星期一, 6=星期日）
         tz_delta = timedelta(hours=8)
         today_dt = datetime.utcnow() + tz_delta
         weekday_map = ['星期一', '星期二', '星期三', '星期四', '星期五', '星期六', '星期日']
         weekday_idx = today_dt.weekday()
-        # 關鍵字對應天數偏移
         if '後天' in user_message:
             target_idx = (weekday_idx + 2) % 7
             return weekday_map[target_idx]
@@ -109,90 +107,68 @@ def handle_message(event):
         if '前天' in user_message:
             target_idx = (weekday_idx - 2) % 7
             return weekday_map[target_idx]
-        # 支援直接問星期幾
-        for i, w in enumerate(weekday_map):
+        for w in weekday_map:
             if w in user_message:
                 return w
         return None
-    # 查詢明天擺攤地點
+    # 統一擺攤查詢 function
+    def find_stall_info_by_weekday(target_weekday, label=None):
+        try:
+            scope = [
+                'https://spreadsheets.google.com/feeds',
+                'https://www.googleapis.com/auth/drive',
+            ]
+            gcp_key_json = os.getenv("GCP_KEY_JSON")
+            creds = ServiceAccountCredentials.from_json_keyfile_dict(json.loads(gcp_key_json), scope)
+            client = gspread.authorize(creds)
+            sheet = client.open_by_key(os.getenv("GOOGLE_SHEET_ID")).sheet1
+            rows = sheet.get_all_records()
+            found = False
+            for row in rows:
+                # 僅當該 row 的星期欄包含目標星期且地點有值才算有資料
+                if target_weekday in str(row.get('星期 weekdays')) and row.get('擺攤地點 location'):
+                    location = row.get('擺攤地點 location')
+                    timing = row.get('時間 timing')
+                    remark = row.get('備註 remark')
+                    msg = f"{label or target_weekday}擺攤地點：\n地點：{location}"
+                    if timing:
+                        msg += f"\n時間：{timing}"
+                    if remark:
+                        msg += f"\n備註：{remark}"
+                    found = True
+                    break
+            if not found:
+                msg = f"抱歉，{label or target_weekday}暫無擺攤資訊，請稍後再查詢或聯絡店家。"
+            line_bot_api.reply_message(event.reply_token, TextSendMessage(text=msg))
+        except Exception as e:
+            import traceback
+            print(f"[ERROR] 查詢{target_weekday}擺攤地點失敗: {e}")
+            traceback.print_exc()
+            line_bot_api.reply_message(event.reply_token, TextSendMessage(text=f"抱歉，查詢{label or target_weekday}擺攤地點時發生錯誤，請稍後再試！"))
+    # 擺攤查詢觸發條件
     if any(k in user_message for k in ["明天在哪擺攤", "明天在哪裡", "明天攤位"]):
-        try:
-            # Google Sheets API 驗證（用環境變數）
-            scope = [
-                'https://spreadsheets.google.com/feeds',
-                'https://www.googleapis.com/auth/drive',
-            ]
-            gcp_key_json = os.getenv("GCP_KEY_JSON")
-            creds = ServiceAccountCredentials.from_json_keyfile_dict(json.loads(gcp_key_json), scope)
-            client = gspread.authorize(creds)
-            sheet = client.open_by_key(os.getenv("GOOGLE_SHEET_ID")).sheet1
-            rows = sheet.get_all_records()
-            # 取得明天日期（台灣時區）
-            tz_delta = timedelta(hours=8)
-            tomorrow = (datetime.utcnow() + tz_delta + timedelta(days=1)).strftime('%A').lower()
-            weekday_map = {
-                'monday': '星期一', 'tuesday': '星期二', 'wednesday': '星期三', 'thursday': '星期四', 'friday': '星期五', 'saturday': '星期六', 'sunday': '星期日'
-            }
-            tomorrow_zh = weekday_map.get(tomorrow, tomorrow)
-            print(f"[DEBUG] 明天中文星期: {tomorrow_zh}")
-            print(f"[DEBUG] 讀到的 rows: {rows}")
-            found = False
-            for row in rows:
-                if tomorrow_zh in str(row.get('星期 weekdays')):
-                    location = row.get('擺攤地點 location')
-                    timing = row.get('時間 timing')
-                    remark = row.get('備註 remark')
-                    msg = f"明天（{tomorrow_zh}）擺攤地點：\n地點：{location}\n時間：{timing}"
-                    if remark:
-                        msg += f"\n備註：{remark}"
-                    found = True
-                    break
-            if not found:
-                msg = f"抱歉，明天（{tomorrow_zh}）暫無擺攤資訊，請稍後再查詢或聯絡店家。"
-            line_bot_api.reply_message(event.reply_token, TextSendMessage(text=msg))
-        except Exception as e:
-            import traceback
-            print(f"[ERROR] 查詢明天擺攤地點失敗: {e}")
-            traceback.print_exc()
-            line_bot_api.reply_message(event.reply_token, TextSendMessage(text="抱歉，查詢明天擺攤地點時發生錯誤，請稍後再試！"))
+        target_weekday = get_target_weekday("明天")
+        find_stall_info_by_weekday(target_weekday, label=f"明天（{target_weekday}）")
         return
-    # 查詢今天擺攤地點
     if any(k in user_message for k in ["今天在哪擺攤", "今天在哪裡", "今天攤位"]):
-        try:
-            scope = [
-                'https://spreadsheets.google.com/feeds',
-                'https://www.googleapis.com/auth/drive',
-            ]
-            gcp_key_json = os.getenv("GCP_KEY_JSON")
-            creds = ServiceAccountCredentials.from_json_keyfile_dict(json.loads(gcp_key_json), scope)
-            client = gspread.authorize(creds)
-            sheet = client.open_by_key(os.getenv("GOOGLE_SHEET_ID")).sheet1
-            rows = sheet.get_all_records()
+        target_weekday = get_target_weekday("今天")
+        find_stall_info_by_weekday(target_weekday, label=f"今天（{target_weekday}）")
+        return
+    # 問「後天/昨天/前天/星期幾」
+    for key in ["後天", "昨天", "前天", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六", "星期日"]:
+        if key in user_message:
+            target_weekday = get_target_weekday(user_message)
+            find_stall_info_by_weekday(target_weekday, label=f"{target_weekday}")
+            return
+    # 買麻糬/麻薯/擺攤相關問題自動查詢對應日期
+    if any(k in user_message for k in buy_mochi_keywords) or (any(k in user_message for k in mochi_keywords) and not any(x in user_message for x in ["口味", "有什麼口味", "有哪些口味", "麻糬口味", "麻薯口味"])):
+        target_weekday = get_target_weekday(user_message)
+        if not target_weekday:
             tz_delta = timedelta(hours=8)
-            today = (datetime.utcnow() + tz_delta).strftime('%A').lower()
-            weekday_map = {
-                'monday': '星期一', 'tuesday': '星期二', 'wednesday': '星期三', 'thursday': '星期四', 'friday': '星期五', 'saturday': '星期六', 'sunday': '星期日'
-            }
-            today_zh = weekday_map.get(today, today)
-            found = False
-            for row in rows:
-                if today_zh in str(row.get('星期 weekdays')):
-                    location = row.get('擺攤地點 location')
-                    timing = row.get('時間 timing')
-                    remark = row.get('備註 remark')
-                    msg = f"今天（{today_zh}）擺攤地點：\n地點：{location}\n時間：{timing}"
-                    if remark:
-                        msg += f"\n備註：{remark}"
-                    found = True
-                    break
-            if not found:
-                msg = f"抱歉，今天（{today_zh}）暫無擺攤資訊，請稍後再查詢或聯絡店家。"
-            line_bot_api.reply_message(event.reply_token, TextSendMessage(text=msg))
-        except Exception as e:
-            import traceback
-            print(f"[ERROR] 查詢今天擺攤地點失敗: {e}")
-            traceback.print_exc()
-            line_bot_api.reply_message(event.reply_token, TextSendMessage(text="抱歉，查詢今天擺攤地點時發生錯誤，請稍後再試！"))
+            today_dt = datetime.utcnow() + tz_delta
+            weekday_map = ['星期一', '星期二', '星期三', '星期四', '星期五', '星期六', '星期日']
+            target_weekday = weekday_map[today_dt.weekday()]
+        find_stall_info_by_weekday(target_weekday, label=f"{target_weekday}")
         return
     # 麻糬/麻薯口味詢問專屬回覆（優先於買麻糬）
     if any(k in user_message for k in ["麻糬口味", "麻薯口味", "口味", "有什麼口味", "有哪些口味"]):
@@ -214,41 +190,6 @@ def handle_message(event):
         template = random.choice(RECOMMEND_TEMPLATES)
         reply = template.format(city=city.replace("市", ""), weather=weather, flavor=flavor) + f"\n目前溫度：{temp}°C"
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply))
-        return
-    # 買麻糬/麻薯/擺攤相關問題自動查詢對應日期
-    if any(k in user_message for k in buy_mochi_keywords) or (any(k in user_message for k in mochi_keywords) and not any(x in user_message for x in ["口味", "有什麼口味", "有哪些口味", "麻糬口味", "麻薯口味"])):
-        target_weekday = get_target_weekday(user_message)
-        try:
-            scope = [
-                'https://spreadsheets.google.com/feeds',
-                'https://www.googleapis.com/auth/drive',
-            ]
-            gcp_key_json = os.getenv("GCP_KEY_JSON")
-            creds = ServiceAccountCredentials.from_json_keyfile_dict(json.loads(gcp_key_json), scope)
-            client = gspread.authorize(creds)
-            sheet = client.open_by_key(os.getenv("GOOGLE_SHEET_ID")).sheet1
-            rows = sheet.get_all_records()
-            tz_delta = timedelta(hours=8)
-            today_dt = datetime.utcnow() + tz_delta
-            weekday_map = ['星期一', '星期二', '星期三', '星期四', '星期五', '星期六', '星期日']
-            # 預設查今天
-            if not target_weekday:
-                target_weekday = weekday_map[today_dt.weekday()]
-            found = False
-            for row in rows:
-                if target_weekday in str(row.get('星期 weekdays')):
-                    location = row.get('擺攤地點 location')
-                    msg = f"嗨，感謝您對麻糬的喜愛，歡迎您到{location}我們攤位購買，另外，我們會建立外送服務喔！🍡"
-                    found = True
-                    break
-            if not found:
-                msg = f"嗨，感謝您對麻糬的喜愛，目前{target_weekday}暫無擺攤資訊，敬請期待外送服務上線！🍡"
-            line_bot_api.reply_message(event.reply_token, TextSendMessage(text=msg))
-        except Exception as e:
-            import traceback
-            print(f"[ERROR] 查詢{target_weekday}擺攤地點(買麻糬)失敗: {e}")
-            traceback.print_exc()
-            line_bot_api.reply_message(event.reply_token, TextSendMessage(text=f"嗨，感謝您對麻糬的喜愛，目前查詢{target_weekday}擺攤地點時發生錯誤，敬請期待外送服務上線！"))
         return
     FAQ_ANSWERS = {
         "品牌故事": "次妹手工麻糬創立於2020年，堅持手作、天然、無添加，陪伴你每一個溫暖時刻。",
