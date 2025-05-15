@@ -71,6 +71,11 @@ def handle_member_joined(event):
 def handle_message(event):
     user_message = event.message.text.strip()
     print(f"[DEBUG] 收到訊息: {user_message}")
+    # 只回覆明確問 BOT 的訊息
+    trigger_keywords = ["@次妹", "BOT", "次妹", "請問", "？", "哪裡擺攤", "明天在哪擺攤", "今天在哪擺攤", "天氣", "遊戲", "陪我聊天", "陪我們聊天", "品牌故事", "保存", "買麻糬", "我要買麻糬", "我們要買麻糬", "到哪買麻糬", "麻糬口味"]
+    # 只要有「麻糬」兩字也要回覆
+    if not (any(k in user_message for k in trigger_keywords) or "麻糬" in user_message):
+        return  # 不是問 BOT 的訊息就不回覆
     # Debug: 回傳群組ID（務必最優先判斷）
     if event.source.type == "group" and user_message.lower() == "gid":
         print("✅ 收到來自群組的訊息")
