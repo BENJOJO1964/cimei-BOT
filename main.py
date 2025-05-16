@@ -103,6 +103,22 @@ def handle_message(event):
     print(f"[DEBUG] GPT 意圖分析結果: {intent_result}")
     reply_list = []
     # 擺攤地點查詢
+    def get_weekday_from_relative(date_str):
+        tz_delta = timedelta(hours=8)
+        today_dt = datetime.utcnow() + tz_delta
+        weekday_map = ['星期一', '星期二', '星期三', '星期四', '星期五', '星期六', '星期日']
+        weekday_idx = today_dt.weekday()
+        if date_str == '明天':
+            return weekday_map[(weekday_idx + 1) % 7]
+        if date_str == '後天':
+            return weekday_map[(weekday_idx + 2) % 7]
+        if date_str == '今天':
+            return weekday_map[weekday_idx]
+        if date_str == '昨天':
+            return weekday_map[(weekday_idx - 1) % 7]
+        if date_str == '前天':
+            return weekday_map[(weekday_idx - 2) % 7]
+        return date_str
     def find_stall_info_by_weekday(target_weekday, label=None):
         try:
             scope = [
@@ -140,12 +156,14 @@ def handle_message(event):
         if intent["type"] == "location":
             # 解析日期
             date = intent.get("date")
-            if not date:
+            if date:
+                weekday = get_weekday_from_relative(date)
+            else:
                 tz_delta = timedelta(hours=8)
                 today_dt = datetime.utcnow() + tz_delta
                 weekday_map = ['星期一', '星期二', '星期三', '星期四', '星期五', '星期六', '星期日']
-                date = weekday_map[today_dt.weekday()]
-            msg = find_stall_info_by_weekday(date, label=f"{date}")
+                weekday = weekday_map[today_dt.weekday()]
+            msg = find_stall_info_by_weekday(weekday, label=f"{date or weekday}")
             reply_list.append(msg)
         elif intent["type"] == "flavor":
             reply_list.append("我們有6種口味：花生、芝麻、芋泥、棗泥、紅豆、咖哩，歡迎選購！")
