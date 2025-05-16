@@ -45,4 +45,48 @@ def chat_with_user(user_message):
         return response.choices[0].message.content.strip()
     except Exception as e:
         print(f"[OpenAI API Error] {str(e)}")
-        return random.choice(CHAT_RESPONSES) 
+        return random.choice(CHAT_RESPONSES)
+
+# 新增：意圖分析函式
+
+def analyze_intent_with_gpt(user_message):
+    """
+    用 GPT-3.5-turbo 分析訊息意圖，回傳結構化 dict，例如：
+    {"intents": [{"type": "location", "date": "明天"}, {"type": "flavor"}]}
+    """
+    if not OPENAI_API_KEY:
+        return {"intents": []}
+    import openai
+    client = openai.OpenAI(api_key=OPENAI_API_KEY)
+    system_prompt = (
+        "你是 LINE 麻糬店 BOT，請根據用戶訊息判斷意圖，只回傳 JSON 格式，不要多餘說明。\n"
+        "意圖類型有：location（問擺攤地點）、flavor（問口味）、price（問價格）、order（下訂單）、weather（問天氣）、chat（閒聊）、other（其他）。\n"
+        "如有多重意圖，請全部列出。若有日期、口味、數量、地點等資訊請一併標註。\n"
+        "範例：{\"intents\":[{\"type\":\"location\",\"date\":\"明天\"},{\"type\":\"flavor\"}]}"
+    )
+    try:
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_message}
+            ],
+            max_tokens=120,
+            temperature=0
+        )
+        import json as pyjson
+        content = response.choices[0].message.content.strip()
+        # 嘗試解析 JSON
+        try:
+            result = pyjson.loads(content)
+            return result
+        except Exception:
+            # 若 GPT 回傳非純 JSON，嘗試抽取 JSON 區塊
+            import re
+            match = re.search(r'\{.*\}', content, re.DOTALL)
+            if match:
+                return pyjson.loads(match.group(0))
+            return {"intents": []}
+    except Exception as e:
+        print(f"[OpenAI API Error - analyze_intent_with_gpt] {str(e)}")
+        return {"intents": []} 
