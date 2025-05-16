@@ -7,6 +7,7 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 from datetime import datetime, timedelta
 import json
+import random
 
 from config.env import LINE_CHANNEL_ACCESS_TOKEN, LINE_CHANNEL_SECRET
 # from handlers.order_flow import handle_order_flow  # 已刪除，不再匯入
@@ -94,6 +95,8 @@ def handle_message(event):
         reply = "每顆10元，小盒6顆/60元，大盒12顆/120元。"
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply))
         return
+    # emoji 列表
+    EMOJIS = ["🍡", "🥳", "📍", "🧋", "😋", "✨", "🎉", "🍬", "🍀", "🫶"]
     # 其餘訊息交給 GPT 分析意圖
     from handlers.gpt_chat import analyze_intent_with_gpt
     intent_result = analyze_intent_with_gpt(user_message)
@@ -138,7 +141,6 @@ def handle_message(event):
             # 解析日期
             date = intent.get("date")
             if not date:
-                # 預設今天
                 tz_delta = timedelta(hours=8)
                 today_dt = datetime.utcnow() + tz_delta
                 weekday_map = ['星期一', '星期二', '星期三', '星期四', '星期五', '星期六', '星期日']
@@ -161,13 +163,23 @@ def handle_message(event):
             reply_list.append(reply)
         elif intent["type"] == "chat":
             reply_list.append("嗨，我是次妹～有什麼想聊的嗎？不管是麻糬還是生活都可以問我喔！")
-        elif intent["type"] == "order":
-            reply_list.append("訂購請填寫表單或私訊我們，謝謝！")
+        elif intent["type"] in ["order", "buy"]:
+            # 買麻糬/訂單意圖自動查詢今天擺攤地點，合併價格與口味
+            tz_delta = timedelta(hours=8)
+            today_dt = datetime.utcnow() + tz_delta
+            weekday_map = ['星期一', '星期二', '星期三', '星期四', '星期五', '星期六', '星期日']
+            date = intent.get("date") or weekday_map[today_dt.weekday()]
+            msg = find_stall_info_by_weekday(date, label=f"{date}")
+            reply = msg
+            if "暫無擺攤資訊" not in msg:
+                reply += "\n---\n我們有6種口味：花生、芝麻、芋泥、棗泥、紅豆、咖哩。\n每顆10元，小盒6顆/60元，大盒12顆/120元。\n如需訂購請現場洽詢或私訊我們！"
+            reply_list.append(reply)
     # 若無法判斷意圖，給預設回覆
     if not reply_list:
         reply_list = ["您好！我是次妹，想買麻糬嗎？輸入『天氣』『陪我聊聊』體驗更多功能！"]
-    # 合併所有回覆
+    # 合併所有回覆，最後加 emoji
     reply_text = "\n---\n".join(reply_list)
+    reply_text += " " + random.choice(EMOJIS)
     line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_text))
     return
 
